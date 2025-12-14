@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>库克网盘访问工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .folder-input {
+            margin: 20px 0;
+        }
+        input[type="text"] {
+            padding: 10px;
+            width: 300px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #file-list {
+            margin-top: 20px;
+        }
+        .file-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .file-item:hover {
+            background-color: #f5f5f5;
+        }
+        .file-name {
+            font-weight: bold;
+        }
+        .file-size {
+            color: #666;
+            margin-left: 10px;
+        }
+        .file-date {
+            color: #999;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+        .error {
+            color: red;
+            margin: 10px 0;
+        }
+        .loading {
+            color: #666;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>库克网盘文件夹访问</h1>
+    
+    <div class="folder-input">
+        <label for="folder-path">文件夹路径:</label>
+        <input type="text" id="folder-path" placeholder="例如: /我的文件/文档" value="/">
+        <button onclick="loadFolderContent()">加载内容</button>
+    </div>
+    
+    <div id="loading" class="loading" style="display: none;">加载中...</div>
+    <div id="error" class="error" style="display: none;"></div>
+    <div id="file-list"></div>
+
+    <script>
+        // 库克网盘的cookie
+        const cookie = "b-user-id=3e5097a9-fa70-917a-4eb4-4b12061c5006; b-user-id=3e5097a9-fa70-917a-4eb4-4b12061c5006; _UP_A4A_11_=wb9cc1da5bf049fba4b58c2c3f56bbda; __sdid=AARdoXS3u3D0I+X4m+SgyiIyKvcBprtpc9BBkX0mWPk5TfqubzJ29FVYxQDiww1opIEAHcJLpexF/fkLtQRvKZszZ8KvpAwCQ+ny1klgeyDAMA==; __wpkreporterwid_=bae469ec-0d22-4340-2f86-afe24fcb9e99; ctoken=tpmjO1xfo5GYbPTJi1lsnnmM; web-grey-id=ce01b1f6-f8b1-c6a3-c917-4920f77da213; web-grey-id.sig=safCGYL6OTpl7kZD2JEAZjgQVuzy-0xi69vlGoId75g; grey-id=2bbef43a-ac96-d3e9-9064-083665c2f309; grey-id.sig=Shq-gjAeIb_37g3-r9PIcMz9GfSxElGVr-VyU6OxR0k; isQuark=true; isQuark.sig=hUgqObykqFom5Y09bll94T1sS9abT1X-4Df_lzgl8nM; xlly_s=1; __chkey=; _UP_D_=pc; _UP_F7E_8D_=OU7RkS5Fl8B3%2BeYv2SxIQaQCQD0YeS8u%2B22pxteHndjXdTfkOk23omxlKRQKHTusQu31OxfuJJxLHpvA%2Fhicy1HUTu2LBlCPom4qTWeMFqCgN55FQx3lIyu%2B1OsWIKjG1w4pOGWcZjvuo4m2jHof9eRj66wpeTPO4r7NBD%2F4wEE0IpjIBHWretgcndtvmRjOo49ieoPSyxuCrMEONhiIRbzk4nczcPLP1rSgCMVm5ws2Z%2BPyTAVLm9DknFGHhIbr7cvQKJyAgu1Nk%2BXQT0H97AXOUow356pWhiVk6xpmoJkVOMEdD6uzZJXMxBnUatpyAHLu79tlMNqP8TGNMQXXgvSqK5ufzR58ZeivnehV0qE%2FWt1yDEDt%2BfWrmT4mVs6zZWXvqpzmoV3MeygIUCEakjmqUpi%2BMoCaK%2BK%2BYrCYUbg6F8u7yQFbh%2F0Q7RCSfK2U6tAXQttwc%2FtDK7HYGyvolg%3D%3D; isg=BBQUy1UPAfmqX5Sif74rHusL5VKGbThXSG2dD671pB8imbTj1n91585anJEBNXCv; tfstk=g8asn-acMdv1LAE-fq5edK9Ct7ufU67P1IGYZSLwMV39k-NmLf-NjmWbA-eEBPSiQJMbaSYqQ5uOG-w8Cmybi1cxH-ej3lSFz5VioqBzca7zs9mfe-UskKPKSjr4nfKGz5VM9C9AakQPlkQDYxHYHcHL9bMK6fexDDCIMjJ9DFeY96MngEHxBxQp9bhXHq3YHWCIivHxkceY96GmpxhE89GhfAF1aHdilypoD5HBkEUCocM76n8vkyGsf0Ftd5N_RfisFmMQNXzTLSUaSDjk4qVUV-ZYpwT_h5E8HAzdeEM4qjNxN4QkNvU_GyigYdKtNVMs2PnpaUNiDkaI7PBDqWPIB0gUYMXZ0Vw_qYmOx92bOAyY5Dp1LxrzTPnQe98QnmZTCX3R4GLrFeDDcBikkXMPO6tDmA80psSw4gfZXXcUz61BCnmttXMPO6tDmchnT05COdtc.; __pus=3593404ee85cfb0dc74a55fce5ee5937AAQn8wQukttD0EINNKn4HEyS0grasCv153vIow4Uam62F/i5e73agRvFjBXUsLi7RhZaJ0GDg4E2RWFddxKxNqnF; __kp=ebeda240-d8cd-11f0-b1b9-750bb7460746; __kps=AAQnNLvbAbaNFbL1hMXgOTyV; __ktd=9xbTB2iX9WO6Og4tGFpdfQ==; __uid=AAQnNLvbAbaNFbL1hMXgOTyV; __puus=97cb2d3aff4f07850dd0954ff8941a49AAQIHDlBi2uJuTJgQgWqAhsmdDUU4EvYofeXGxQEaP5qNRhEgGj84xFSKrfuyjDvDOByJTSESOu408H2SxDztejop0ij26j2059CHJZf70Mw1CwHH/uqiS7PD4raeYwJQqmSEVa/0B982/2ziRUMKD0fAX358Coe8UYXnaO8pEdT4ASm+97AyUhSJ/TzmOUaL4P9lU5YKeMSBUzyXKQpc8oo";
+
+        // 加载文件夹内容
+        async function loadFolderContent() {
+            const folderPath = document.getElementById('folder-path').value;
+            const loadingDiv = document.getElementById('loading');
+            const errorDiv = document.getElementById('error');
+            const fileListDiv = document.getElementById('file-list');
+
+            // 重置状态
+            loadingDiv.style.display = 'block';
+            errorDiv.style.display = 'none';
+            fileListDiv.innerHTML = '';
+
+            try {
+                // 调用库克网盘API获取文件夹内容
+                const response = await fetch(`https://drive.quark.cn/1/clouddrive/file/list?path=${encodeURIComponent(folderPath)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Cookie': cookie,
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                        'Accept': 'application/json, text/plain, */*',
+                        'Referer': 'https://drive.quark.cn/'
+                    },
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API请求失败: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.code === 0 && data.data && data.data.list) {
+                    // 渲染文件列表
+                    renderFileList(data.data.list);
+                } else {
+                    throw new Error(`API返回错误: ${data.msg || '未知错误'}`);
+                }
+            } catch (error) {
+                errorDiv.textContent = `加载失败: ${error.message}`;
+                errorDiv.style.display = 'block';
+                console.error('加载文件夹内容出错:', error);
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        // 渲染文件列表
+        function renderFileList(files) {
+            const fileListDiv = document.getElementById('file-list');
+            
+            if (files.length === 0) {
+                fileListDiv.innerHTML = '<p>该文件夹为空</p>';
+                return;
+            }
+
+            files.forEach(file => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                
+                const fileName = document.createElement('span');
+                fileName.className = 'file-name';
+                fileName.textContent = file.name;
+                
+                const fileSize = document.createElement('span');
+                fileSize.className = 'file-size';
+                fileSize.textContent = formatFileSize(file.size);
+                
+                const fileDate = document.createElement('span');
+                fileDate.className = 'file-date';
+                fileDate.textContent = formatDate(file.mtime);
+                
+                fileItem.appendChild(fileName);
+                fileItem.appendChild(fileSize);
+                fileItem.appendChild(fileDate);
+                
+                // 添加点击事件（如果是文件夹则进入下一级）
+                if (file.type === 'folder') {
+                    fileItem.style.cursor = 'pointer';
+                    fileItem.title = '点击进入该文件夹';
+                    fileItem.onclick = () => {
+                        const currentPath = document.getElementById('folder-path').value;
+                        const newPath = currentPath.endsWith('/') ? currentPath + file.name : currentPath + '/' + file.name;
+                        document.getElementById('folder-path').value = newPath;
+                        loadFolderContent();
+                    };
+                } else {
+                    // 如果是文件，添加下载功能
+                    fileItem.title = '点击下载该文件';
+                    fileItem.onclick = () => {
+                        downloadFile(file);
+                    };
+                }
+                
+                fileListDiv.appendChild(fileItem);
+            });
+        }
+
+        // 下载文件
+        async function downloadFile(file) {
+            try {
+                // 获取下载链接
+                const response = await fetch(`https://drive.quark.cn/1/clouddrive/file/downloadurl?path=${encodeURIComponent(file.path)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Cookie': cookie,
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                        'Accept': 'application/json, text/plain, */*',
+                        'Referer': 'https://drive.quark.cn/'
+                    },
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`获取下载链接失败: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.code === 0 && data.data && data.data.download_url) {
+                    // 创建临时链接下载文件
+                    const link = document.createElement('a');
+                    link.href = data.data.download_url;
+                    link.download = file.name;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } else {
+                    throw new Error(`获取下载链接失败: ${data.msg || '未知错误'}`);
+                }
+            } catch (error) {
+                console.error('下载文件出错:', error);
+                alert(`下载失败: ${error.message}`);
+            }
+        }
+
+        // 格式化文件大小
+        function formatFileSize(size) {
+            if (size < 1024) return size + ' B';
+            if (size < 1024 * 1024) return (size / 1024).toFixed(2) + ' KB';
+            if (size < 1024 * 1024 * 1024) return (size / (1024 * 1024)).toFixed(2) + ' MB';
+            return (size / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+        }
+
+        // 格式化日期
+        function formatDate(timestamp) {
+            const date = new Date(timestamp * 1000);
+            return date.toLocaleString();
+        }
+
+        // 页面加载时默认加载根目录
+        window.onload = loadFolderContent;
+    </script>
+</body>
+</html>
